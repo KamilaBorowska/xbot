@@ -53,6 +53,10 @@ fn strip_code(mut s: &str) -> &str {
 static NIX_STORE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"/nix/store/[^/]+-gcc-[^/]+/include/c[+][+]/[^/]+/").unwrap());
 
+fn more_than_15_newlines(s: &str) -> bool {
+    s.bytes().filter(|&c| c == b'\n').nth(15 - 1).is_some()
+}
+
 async fn eval(
     ctx: &Context,
     msg: &Message,
@@ -85,33 +89,41 @@ async fn eval(
             .json()
             .await?
     };
-    let mut output = MessageBuilder::new();
-    if !stdout.is_empty() {
-        let mut stdout_trimmed: String = stdout.chars().take(800).collect();
-        if stdout_trimmed != stdout {
-            stdout_trimmed.push_str("\n[trimmed]");
-        }
-        output.push_codeblock_safe(stdout_trimmed, None);
-    }
-    if !stderr.is_empty() {
+    let stderr = NIX_STORE.replace_all(&stderr, "");
+    if stdout.len() > 800
+        || stderr.len() > 800
+        || more_than_15_newlines(&stdout)
+        || more_than_15_newlines(&stderr)
+    {
+        msg.channel_id
+            .send_message(ctx, |m| {
+                m.reference_message(msg);
+                if !stdout.is_empty() {
+                    m.add_file((stdout.as_bytes(), "stdout.txt"));
+                }
+                if !stderr.is_empty() {
+                    m.add_file((stderr.as_bytes(), "stderr.txt"));
+                }
+                m
+            })
+            .await?;
+    } else {
+        let mut output = MessageBuilder::new();
         if !stdout.is_empty() {
-            output.push_line("");
+            output.push_codeblock_safe(&stdout, None);
         }
-        output.push_line("Error output:");
-        let mut stderr_trimmed: String = NIX_STORE
-            .replace_all(&stderr, "")
-            .chars()
-            .take(800)
-            .collect();
-        if stderr_trimmed != stderr {
-            stderr_trimmed.push_str("\n[trimmed]");
+        if !stderr.is_empty() {
+            if !stdout.is_empty() {
+                output.push_line("");
+            }
+            output.push_line("Error output:");
+            output.push_codeblock_safe(&stderr, None);
         }
-        output.push_codeblock_safe(&stderr_trimmed, None);
+        if output.0.is_empty() {
+            output.push_italic("(no output)");
+        }
+        msg.reply(&ctx, output.0).await?;
     }
-    if output.0.is_empty() {
-        output.push_italic("(no output)");
-    }
-    msg.reply(&ctx, output.0).await?;
     Ok(())
 }
 
