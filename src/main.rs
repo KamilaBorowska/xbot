@@ -170,6 +170,7 @@ struct Eval;
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().ok();
     env_logger::init();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let http = Http::new_with_token(&token);
