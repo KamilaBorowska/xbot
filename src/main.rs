@@ -128,7 +128,13 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         |rest| {
             let contains_return = rest.contains("return");
             format!(
-                "#include <cstdio>\n#include <iostream>\nauto expr() {{ \n{}{}{}{}\n }} int main() {{ std::cout << expr(); }}",
+                concat!(
+                    "#include <cstdio>\n",
+                    "#include <iostream>\n",
+                    "#include <string>\n",
+                    "#include <string_view>\n",
+                    "auto expr() {{ \n{}{}{}{}\n }} int main() {{ std::cout << expr(); }}"
+                ),
                 if contains_return {
                     ""
                 } else {
@@ -147,7 +153,7 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 },
             )
         },
-        "mv code{,.cpp}; clang++ -Wall -Wextra code.cpp && ./a.out",
+        "mv code{,.cpp}; clang++ -std=c++17 -Wall -Wextra code.cpp && ./a.out",
     ).await
 }
 
