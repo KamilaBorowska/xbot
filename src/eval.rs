@@ -1,12 +1,11 @@
+use crate::SharedKey;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
 use serenity::client::Context;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{Args, CommandResult};
 use serenity::model::channel::Message;
-use std::env;
 
 #[derive(Serialize)]
 struct Command<'a> {
@@ -53,8 +52,6 @@ fn strip_code(mut s: &str) -> &str {
 static NIX_STORE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"/nix/store/[^/]+-gcc-[^/]+/include/c[+][+]/[^/]+/").unwrap());
 
-static SANDBOX_URL: Lazy<String> = Lazy::new(|| env::var("SANDBOX_URL").unwrap());
-
 async fn eval(
     ctx: &Context,
     msg: &Message,
@@ -69,19 +66,24 @@ async fn eval(
     } else {
         int_main_wrapper(contents.trim())
     };
-    let Response { stdout, stderr } = ReqwestClient::new()
-        .post(&*SANDBOX_URL)
-        .json(&Command {
-            stdin: "",
-            code,
-            files: Files {
-                code: File { contents },
-            },
-        })
-        .send()
-        .await?
-        .json()
-        .await?;
+    let Response { stdout, stderr } = {
+        let shared = ctx.data.read().await;
+        let shared = shared.get::<SharedKey>().unwrap();
+        shared
+            .client
+            .post(&shared.sandbox_url)
+            .json(&Command {
+                stdin: "",
+                code,
+                files: Files {
+                    code: File { contents },
+                },
+            })
+            .send()
+            .await?
+            .json()
+            .await?
+    };
     let mut output = String::new();
     if !stdout.is_empty() {
         output.push_str("```\n");

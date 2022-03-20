@@ -3,10 +3,23 @@ mod help;
 
 use eval::EVAL_GROUP;
 use help::HELP;
+use reqwest::Client as ReqwestClient;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
+use serenity::prelude::TypeMapKey;
 use serenity::Client;
 use std::env;
+
+struct SharedKey;
+
+impl TypeMapKey for SharedKey {
+    type Value = Shared;
+}
+
+struct Shared {
+    sandbox_url: String,
+    client: ReqwestClient,
+}
 
 #[tokio::main]
 async fn main() {
@@ -32,5 +45,12 @@ async fn main() {
         .framework(framework)
         .await
         .expect("Error creating client");
+    {
+        let mut data = client.data.write().await;
+        data.insert::<SharedKey>(Shared {
+            sandbox_url: env::var("SANDBOX_URL").expect("Sandbox URL"),
+            client: ReqwestClient::new(),
+        });
+    }
     client.start().await.unwrap();
 }
