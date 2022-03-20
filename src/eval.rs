@@ -97,14 +97,14 @@ async fn eval(
     {
         msg.channel_id
             .send_message(ctx, |m| {
-                m.reference_message(msg);
                 if !stdout.is_empty() {
                     m.add_file((stdout.as_bytes(), "stdout.txt"));
                 }
                 if !stderr.is_empty() {
                     m.add_file((stderr.as_bytes(), "stderr.txt"));
                 }
-                m
+                m.reference_message(msg)
+                    .allowed_mentions(|f| f.replied_user(false))
             })
             .await?;
     } else {
