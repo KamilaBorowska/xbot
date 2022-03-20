@@ -1,35 +1,12 @@
 mod eval;
+mod help;
 
 use eval::EVAL_GROUP;
-use serenity::client::Context;
-use serenity::framework::standard::macros::help;
-use serenity::framework::standard::{
-    help_commands, Args, CommandGroup, CommandResult, HelpOptions,
-};
+use help::HELP;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
-use serenity::model::channel::Message;
-use serenity::model::id::UserId;
 use serenity::Client;
-use std::collections::HashSet;
 use std::env;
-
-#[help]
-#[strikethrough_commands_tip_in_dm = ""]
-#[strikethrough_commands_tip_in_guild = ""]
-#[available_text = ""]
-#[max_levenshtein_distance(3)]
-async fn help(
-    context: &Context,
-    msg: &Message,
-    args: Args,
-    help_options: &'static HelpOptions,
-    groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>,
-) -> CommandResult {
-    help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
-    Ok(())
-}
 
 #[tokio::main]
 async fn main() {
