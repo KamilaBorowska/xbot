@@ -205,7 +205,12 @@ async fn main() {
         .expect("Application information to be obtainable")
         .id;
     let framework = StandardFramework::new()
-        .configure(|c| c.on_mention(Some(bot_id)).prefix("!xb ").no_dm_prefix(true))
+        .configure(|c| {
+            c.on_mention(Some(bot_id))
+                .prefix("!xb ")
+                .no_dm_prefix(true)
+                .case_insensitivity(true)
+        })
         .help(&HELP)
         .group(&EVAL_GROUP);
     let mut client = Client::builder(&token)
