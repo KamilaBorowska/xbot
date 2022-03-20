@@ -12,9 +12,9 @@ use serenity::Client;
 use std::env;
 
 #[derive(Serialize)]
-struct Command {
+struct Command<'a> {
     stdin: &'static str,
-    code: &'static str,
+    code: &'a str,
     files: Files,
 }
 
@@ -64,7 +64,7 @@ async fn eval(
     args: Args,
     int_main: &str,
     int_main_wrapper: impl FnOnce(&str) -> String,
-    code: &'static str,
+    code: &str,
 ) -> CommandResult {
     let contents = strip_code(args.rest());
     let contents = if contents.contains(int_main) {
