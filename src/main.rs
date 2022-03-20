@@ -3,12 +3,16 @@ use regex::Regex;
 use reqwest::Client as ReqwestClient;
 use serde::{Deserialize, Serialize};
 use serenity::client::Context;
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult};
+use serenity::framework::standard::macros::{command, group, help};
+use serenity::framework::standard::{
+    help_commands, Args, CommandGroup, CommandResult, HelpOptions,
+};
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
 use serenity::model::channel::Message;
+use serenity::model::id::UserId;
 use serenity::Client;
+use std::collections::HashSet;
 use std::env;
 
 #[derive(Serialize)]
@@ -119,6 +123,8 @@ async fn eval(
 }
 
 #[command]
+#[description = "Evaluate C++ code. If code contains `int main` it will be interpreted as a complete program, otherwise the code will be evaluated as an expression."]
+#[example = r#"std::string("Hello, ") + "world!""#]
 async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     eval(
         ctx,
@@ -151,6 +157,8 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 #[command]
+#[description = "Evaluate Rust code. If code contains `fn main` it will be interpreted as a complete program, otherwise the code will be evaluated as an expression."]
+#[example = r#"format!("Hello, {}!", "world")"#]
 async fn rusteval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     eval(
         ctx,
@@ -164,9 +172,26 @@ async fn rusteval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     ).await
 }
 
-#[group("eval")]
+#[group("Code evaluation commands")]
 #[commands(ceval, rusteval)]
 struct Eval;
+
+#[help]
+#[strikethrough_commands_tip_in_dm = ""]
+#[strikethrough_commands_tip_in_guild = ""]
+#[available_text = ""]
+#[max_levenshtein_distance(3)]
+async fn help(
+    context: &Context,
+    msg: &Message,
+    args: Args,
+    help_options: &'static HelpOptions,
+    groups: &[&'static CommandGroup],
+    owners: HashSet<UserId>,
+) -> CommandResult {
+    help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() {
@@ -181,6 +206,7 @@ async fn main() {
         .id;
     let framework = StandardFramework::new()
         .configure(|c| c.on_mention(Some(bot_id)).prefix("!xb "))
+        .help(&HELP)
         .group(&EVAL_GROUP);
     let mut client = Client::builder(&token)
         .framework(framework)
