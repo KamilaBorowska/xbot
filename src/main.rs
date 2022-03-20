@@ -135,26 +135,19 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     "#include <string_view>\n",
                     "auto expr() {{ \n{}{}{}{}\n }} int main() {{ std::cout << expr(); }}"
                 ),
-                if contains_return {
-                    ""
-                } else {
-                    "return ({"
-                },
+                if contains_return { "" } else { "return ({" },
                 rest,
                 if rest.ends_with(';') || rest.ends_with('}') {
                     ""
                 } else {
                     ";"
                 },
-                if contains_return {
-                    ""
-                } else {
-                    "});"
-                },
+                if contains_return { "" } else { "});" },
             )
         },
         "mv code{,.cpp}; clang++ -std=c++17 -Wall -Wextra code.cpp && ./a.out",
-    ).await
+    )
+    .await
 }
 
 #[command]
