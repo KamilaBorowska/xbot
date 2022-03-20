@@ -39,6 +39,8 @@ async fn main() {
                 .no_dm_prefix(true)
                 .case_insensitivity(true)
         })
+        .bucket("eval", |b| b.delay(2).time_span(30).limit(8))
+        .await
         .help(&HELP)
         .group(&EVAL_GROUP);
     let mut client = Client::builder(&token)
