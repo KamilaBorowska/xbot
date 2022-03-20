@@ -3,9 +3,14 @@ mod help;
 
 use eval::EVAL_GROUP;
 use help::HELP;
+use log::error;
 use reqwest::Client as ReqwestClient;
+use serenity::client::Context;
+use serenity::framework::standard::macros::hook;
+use serenity::framework::standard::DispatchError;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
+use serenity::model::channel::Message;
 use serenity::prelude::TypeMapKey;
 use serenity::Client;
 use std::env;
@@ -19,6 +24,18 @@ impl TypeMapKey for SharedKey {
 struct Shared {
     sandbox_url: String,
     client: ReqwestClient,
+}
+
+#[hook]
+async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+    if let DispatchError::Ratelimited(info) = error {
+        if info.is_first_try {
+            let message = format!("Try this again in {}s", info.as_secs() + 1);
+            if let Err(e) = msg.channel_id.say(&ctx, &message).await {
+                error!("Error while warning the user about rate limit: {}", e);
+            }
+        }
+    }
 }
 
 #[tokio::main]
@@ -39,7 +56,8 @@ async fn main() {
                 .no_dm_prefix(true)
                 .case_insensitivity(true)
         })
-        .bucket("eval", |b| b.delay(2).time_span(30).limit(8))
+        .on_dispatch_error(dispatch_error)
+        .bucket("eval", |b| b.time_span(60).limit(8))
         .await
         .help(&HELP)
         .group(&EVAL_GROUP);
