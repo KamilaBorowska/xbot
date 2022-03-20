@@ -1,0 +1,14 @@
+[package]
+name = "xbot"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+env_logger = "0.9.0"
+once_cell = "1.10.0"
+regex = "1.5.5"
+reqwest = { version = "0.11.10", features = ["json", "native-tls"], default-features = false }
+serenity = { version = "0.10.10", features = ["client", "gateway", "native_tls_backend", "standard_framework"], default-features = false }
+serde = { version = "1.0.136", features = ["derive"] }
+tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
