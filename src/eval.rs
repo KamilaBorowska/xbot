@@ -6,6 +6,7 @@ use serenity::client::Context;
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{Args, CommandResult};
 use serenity::model::channel::Message;
+use serenity::utils::MessageBuilder;
 
 #[derive(Serialize)]
 struct Command<'a> {
@@ -84,36 +85,33 @@ async fn eval(
             .json()
             .await?
     };
-    let mut output = String::new();
+    let mut output = MessageBuilder::new();
     if !stdout.is_empty() {
-        output.push_str("```\n");
-        let stdout_trimmed: String = stdout.chars().take(800).collect();
-        output.push_str(&stdout_trimmed);
+        let mut stdout_trimmed: String = stdout.chars().take(800).collect();
         if stdout_trimmed != stdout {
-            output.push_str("\n[trimmed]");
+            stdout_trimmed.push_str("\n[trimmed]");
         }
-        output.push_str("\n```");
+        output.push_codeblock_safe(stdout_trimmed, None);
     }
     if !stderr.is_empty() {
         if !stdout.is_empty() {
-            output.push('\n');
+            output.push_line("");
         }
-        output.push_str("Error output:\n```\n");
-        let stderr_trimmed: String = NIX_STORE
+        output.push_line("Error output:");
+        let mut stderr_trimmed: String = NIX_STORE
             .replace_all(&stderr, "")
             .chars()
             .take(800)
             .collect();
-        output.push_str(&stderr_trimmed);
         if stderr_trimmed != stderr {
-            output.push_str("\n[trimmed]");
+            stderr_trimmed.push_str("\n[trimmed]");
         }
-        output.push_str("\n```");
+        output.push_codeblock_safe(&stderr_trimmed, None);
     }
-    if output.is_empty() {
-        output.push_str("_(no output)_")
+    if output.0.is_empty() {
+        output.push_italic("(no output)");
     }
-    msg.reply(&ctx, output).await?;
+    msg.reply(&ctx, output.0).await?;
     Ok(())
 }
 
