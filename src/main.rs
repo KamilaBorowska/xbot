@@ -43,12 +43,13 @@ async fn main() {
     dotenv::dotenv().ok();
     env_logger::init();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    let http = Http::new_with_token(&token);
-    let bot_id = http
-        .get_current_user()
-        .await
-        .expect("Application information to be obtainable")
-        .id;
+    let bot_id = {
+        let http = Http::new_with_token(&token);
+        http.get_current_user()
+            .await
+            .expect("Application information to be obtainable")
+            .id
+    };
     let framework = StandardFramework::new()
         .configure(|c| {
             c.on_mention(Some(bot_id))
