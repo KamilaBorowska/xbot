@@ -147,6 +147,7 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     "#include <iostream>\n",
                     "#include <string>\n",
                     "#include <string_view>\n",
+                    "#include <vector>\n",
                     "auto expr() {{ \n{}{}{}{}\n }} ",
                     "int main() {{ std::cout << expr(); }}",
                 ),
