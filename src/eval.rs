@@ -128,9 +128,11 @@ async fn eval(
 }
 
 #[command]
-#[description = "Evaluate C++ code. If code contains `int main` it will be interpreted as a complete program, otherwise the code will be evaluated as an expression."]
 #[example = r#"std::string("Hello, ") + "world!""#]
 #[bucket = "eval"]
+/// Evaluate C++ code. If code contains `int main` it will be interpreted \$
+/// as a complete program, otherwise the code will be evaluated as an \$
+/// expression.
 async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     eval(
         ctx,
@@ -145,7 +147,8 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     "#include <iostream>\n",
                     "#include <string>\n",
                     "#include <string_view>\n",
-                    "auto expr() {{ \n{}{}{}{}\n }} int main() {{ std::cout << expr(); }}"
+                    "auto expr() {{ \n{}{}{}{}\n }} ",
+                    "int main() {{ std::cout << expr(); }}",
                 ),
                 if contains_return { "" } else { "return ({" },
                 rest,
@@ -163,9 +166,11 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 #[command]
-#[description = "Evaluate Rust code. If code contains `fn main` it will be interpreted as a complete program, otherwise the code will be evaluated as an expression."]
 #[example = r#"format!("Hello, {}!", "world")"#]
 #[bucket = "eval"]
+/// Evaluate Rust code. If code contains `fn main` it will be \$
+/// interpreted as a complete program, otherwise the code will \$
+/// be evaluated as an expression.
 async fn rusteval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     eval(
         ctx,
