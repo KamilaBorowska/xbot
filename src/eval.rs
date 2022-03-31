@@ -29,6 +29,7 @@ struct File {
 struct Response {
     stdout: String,
     stderr: String,
+    status: Option<i32>,
 }
 
 fn strip_code(mut s: &str) -> &str {
@@ -71,7 +72,11 @@ async fn eval(
     } else {
         int_main_wrapper(contents.trim())
     };
-    let Response { stdout, stderr } = {
+    let Response {
+        stdout,
+        stderr,
+        status,
+    } = {
         let shared = ctx.data.read().await;
         let shared = shared.get::<SharedKey>().unwrap();
         shared
@@ -89,6 +94,15 @@ async fn eval(
             .json()
             .await?
     };
+    let formatted;
+    let status_message = match status {
+        Some(0) => "",
+        Some(status) => {
+            formatted = format!("Exited with status code {}\n", status);
+            &formatted
+        }
+        None => "Killed the process due to timeout\n",
+    };
     let stderr = NIX_STORE.replace_all(&stderr, "");
     if stdout.len() > 800
         || stderr.len() > 800
@@ -105,21 +119,23 @@ async fn eval(
                 }
                 m.reference_message(msg)
                     .allowed_mentions(|f| f.replied_user(false))
+                    .content(status_message)
             })
             .await?;
     } else {
         let mut output = MessageBuilder::new();
+        output.push(status_message);
         if !stdout.is_empty() {
             output.push_codeblock_safe(&stdout, None);
-        }
-        if !stderr.is_empty() {
-            if !stdout.is_empty() {
+            if !stderr.is_empty() {
                 output.push_line("");
             }
+        }
+        if !stderr.is_empty() {
             output.push_line("Error output:");
             output.push_codeblock_safe(&stderr, None);
         }
-        if output.0.is_empty() {
+        if stdout.is_empty() && stderr.is_empty() {
             output.push_italic("(no output)");
         }
         msg.reply(&ctx, output.0).await?;
