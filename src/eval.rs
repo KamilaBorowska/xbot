@@ -175,7 +175,7 @@ async fn rusteval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         |rest| {
             format!("fn expr() -> impl std::fmt::Debug {{\n{}\n}} fn main() {{ println!(\"{{:#?}}\", expr()); }}", rest)
         },
-        "mv code{,.rs}; $RUST_NIGHTLY/bin/rustc code.rs && ./code",
+        "mv code{,.rs}; $RUST_NIGHTLY/bin/rustc --edition 2021 code.rs && ./code",
     ).await
 }
 
