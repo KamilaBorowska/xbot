@@ -11,6 +11,7 @@ use serenity::framework::standard::DispatchError;
 use serenity::framework::StandardFramework;
 use serenity::http::Http;
 use serenity::model::channel::Message;
+use serenity::model::gateway::GatewayIntents;
 use serenity::prelude::TypeMapKey;
 use serenity::Client;
 use std::env;
@@ -27,7 +28,7 @@ struct Shared {
 }
 
 #[hook]
-async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _command_name: &str) {
     if let DispatchError::Ratelimited(info) = error {
         if info.is_first_try {
             let message = format!("Try this again in {}s", info.as_secs() + 1);
@@ -44,7 +45,7 @@ async fn main() {
     env_logger::init();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let bot_id = {
-        let http = Http::new_with_token(&token);
+        let http = Http::new(&token);
         http.get_current_user()
             .await
             .expect("Application information to be obtainable")
@@ -62,7 +63,10 @@ async fn main() {
         .await
         .help(&HELP)
         .group(&EVAL_GROUP);
-    let mut client = Client::builder(&token)
+    let intents = GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::DIRECT_MESSAGES
+        | GatewayIntents::MESSAGE_CONTENT;
+    let mut client = Client::builder(&token, intents)
         .framework(framework)
         .await
         .expect("Error creating client");
