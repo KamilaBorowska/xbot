@@ -27,8 +27,7 @@ struct File {
 
 #[derive(Deserialize)]
 struct Response {
-    stdout: String,
-    stderr: String,
+    output: String,
     status: Option<i32>,
 }
 
@@ -51,8 +50,9 @@ fn strip_code(mut s: &str) -> &str {
     s
 }
 
-static NIX_STORE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"/nix/store/[^/]+-gcc-[^/]+/include/c[+][+]/[^/]+/").unwrap());
+static FILTER: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"/nix/store/[^/]+-gcc-[^/]+/include/c[+][+]/[^/]+/|\x7F[EO]").unwrap()
+});
 
 fn more_than_15_newlines(s: &str) -> bool {
     s.bytes().filter(|&c| c == b'\n').nth(15 - 1).is_some()
@@ -72,11 +72,7 @@ async fn eval(
     } else {
         int_main_wrapper(contents.trim())
     };
-    let Response {
-        stdout,
-        stderr,
-        status,
-    } = {
+    let Response { output, status } = {
         let shared = ctx.data.read().await;
         let shared = shared.get::<SharedKey>().unwrap();
         shared
@@ -103,42 +99,25 @@ async fn eval(
         }
         None => "Killed the process due to timeout\n",
     };
-    let stderr = NIX_STORE.replace_all(&stderr, "");
-    if stdout.len() > 800
-        || stderr.len() > 800
-        || more_than_15_newlines(&stdout)
-        || more_than_15_newlines(&stderr)
-    {
+    let output = FILTER.replace_all(&output, "").replace("\x7F\x7F", "\x7F");
+    if output.len() > 800 || more_than_15_newlines(&output) {
         msg.channel_id
             .send_message(ctx, |m| {
-                if !stdout.is_empty() {
-                    m.add_file((stdout.as_bytes(), "stdout.txt"));
-                }
-                if !stderr.is_empty() {
-                    m.add_file((stderr.as_bytes(), "stderr.txt"));
-                }
+                m.add_file((output.as_bytes(), "output.txt"));
                 m.reference_message(msg)
                     .allowed_mentions(|f| f.replied_user(false))
                     .content(status_message)
             })
             .await?;
     } else {
-        let mut output = MessageBuilder::new();
-        output.push(status_message);
-        if !stdout.is_empty() {
-            output.push_codeblock_safe(&stdout, None);
-            if !stderr.is_empty() {
-                output.push_line("");
-            }
+        let mut message = MessageBuilder::new();
+        message.push(status_message);
+        if output.is_empty() {
+            message.push_italic("(no output)");
+        } else {
+            message.push_codeblock_safe(&output, None);
         }
-        if !stderr.is_empty() {
-            output.push_line("Error output:");
-            output.push_codeblock_safe(&stderr, None);
-        }
-        if stdout.is_empty() && stderr.is_empty() {
-            output.push_italic("(no output)");
-        }
-        msg.reply(&ctx, output.0).await?;
+        msg.reply(&ctx, message.0).await?;
     }
     Ok(())
 }
