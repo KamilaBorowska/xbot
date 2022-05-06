@@ -44,13 +44,11 @@ async fn main() {
     dotenv::dotenv().ok();
     env_logger::init();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    let bot_id = {
-        let http = Http::new(&token);
-        http.get_current_user()
-            .await
-            .expect("Application information to be obtainable")
-            .id
-    };
+    let bot_id = Http::new(&token)
+        .get_current_user()
+        .await
+        .expect("Application information to be obtainable")
+        .id;
     let framework = StandardFramework::new()
         .configure(|c| {
             c.on_mention(Some(bot_id))
@@ -70,12 +68,9 @@ async fn main() {
         .framework(framework)
         .await
         .expect("Error creating client");
-    {
-        let mut data = client.data.write().await;
-        data.insert::<SharedKey>(Shared {
-            sandbox_url: env::var("SANDBOX_URL").expect("Sandbox URL"),
-            client: ReqwestClient::new(),
-        });
-    }
+    client.data.write().await.insert::<SharedKey>(Shared {
+        sandbox_url: env::var("SANDBOX_URL").expect("Sandbox URL"),
+        client: ReqwestClient::new(),
+    });
     client.start().await.unwrap();
 }
