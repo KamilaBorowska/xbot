@@ -1,25 +1,26 @@
-use serenity::client::Context;
-use serenity::framework::standard::macros::help;
-use serenity::framework::standard::{
-    help_commands, Args, CommandGroup, CommandResult, HelpOptions,
-};
-use serenity::model::channel::Message;
-use serenity::model::id::UserId;
-use std::collections::HashSet;
+use crate::{Context, Error};
+use poise::command;
 
-#[help]
-#[strikethrough_commands_tip_in_dm = ""]
-#[strikethrough_commands_tip_in_guild = ""]
-#[available_text = ""]
-#[max_levenshtein_distance(3)]
-async fn help(
-    context: &Context,
-    msg: &Message,
-    args: Args,
-    help_options: &'static HelpOptions,
-    groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>,
-) -> CommandResult {
-    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
+/// Shows this menu.
+#[command(prefix_command, slash_command, track_edits)]
+pub async fn help(
+    ctx: Context<'_>,
+    #[description = "Specific command to show help about"]
+    #[autocomplete = "autocomplete_command"]
+    command: Option<String>,
+) -> Result<(), Error> {
+    poise::builtins::help(ctx, command.as_deref(), Default::default()).await?;
     Ok(())
+}
+
+async fn autocomplete_command<'a>(
+    ctx: Context<'a>,
+    partial: &'a str,
+) -> impl Iterator<Item = String> + 'a {
+    ctx.framework()
+        .options()
+        .commands
+        .iter()
+        .filter(move |cmd| !cmd.hide_in_help && cmd.name.starts_with(partial))
+        .map(|cmd| cmd.name.to_string())
 }
