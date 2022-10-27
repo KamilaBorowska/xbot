@@ -1,11 +1,9 @@
-use crate::SharedKey;
+use crate::{Context, Error};
 use once_cell::sync::Lazy;
+use poise::command;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serenity::client::Context;
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult};
-use serenity::model::channel::Message;
+use serenity::model::channel::AttachmentType;
 use serenity::utils::MessageBuilder;
 
 #[derive(Serialize)]
@@ -59,28 +57,25 @@ fn more_than_15_newlines(s: &str) -> bool {
 }
 
 async fn eval(
-    ctx: &Context,
-    msg: &Message,
-    args: Args,
+    ctx: Context<'_>,
+    code: &str,
     int_main: &str,
     int_main_wrapper: impl FnOnce(&str) -> String,
-    code: &str,
-) -> CommandResult {
-    let contents = strip_code(args.rest());
+    runner: &str,
+) -> Result<(), Error> {
+    let contents = strip_code(code);
     let contents = if contents.contains(int_main) {
         contents.to_string()
     } else {
         int_main_wrapper(contents.trim())
     };
     let Response { output, status } = {
-        let shared = ctx.data.read().await;
-        let shared = shared.get::<SharedKey>().unwrap();
-        shared
+        ctx.data()
             .client
-            .post(&shared.sandbox_url)
+            .post(&ctx.data().sandbox_url)
             .json(&Command {
                 stdin: "",
-                code,
+                code: runner,
                 files: Files {
                     code: File { contents },
                 },
@@ -101,14 +96,14 @@ async fn eval(
     };
     let output = FILTER.replace_all(&output, "").replace("\x7F\x7F", "\x7F");
     if output.len() > 800 || more_than_15_newlines(&output) {
-        msg.channel_id
-            .send_message(ctx, |m| {
-                m.add_file((output.as_bytes(), "output.txt"));
-                m.reference_message(msg)
-                    .allowed_mentions(|f| f.replied_user(false))
-                    .content(status_message)
+        ctx.send(|m| {
+            m.attachment(AttachmentType::Bytes {
+                data: output.as_bytes().into(),
+                filename: "output.txt".into(),
             })
-            .await?;
+            .content(status_message)
+        })
+        .await?;
     } else {
         let mut message = MessageBuilder::new();
         message.push(status_message);
@@ -117,22 +112,23 @@ async fn eval(
         } else {
             message.push_codeblock_safe(&output, None);
         }
-        msg.reply(&ctx, message.0).await?;
+        ctx.say(message.0).await?;
     }
     Ok(())
 }
 
-#[command]
-#[example = r#"std::string("Hello, ") + "world!""#]
-#[bucket = "eval"]
-/// Evaluate C++ code. If code contains `int main` it will be interpreted \$
-/// as a complete program, otherwise the code will be evaluated as an \$
+#[command(prefix_command, track_edits)]
+/// Evaluate C++ code.
+///
+/// Evaluate C++ code. If code contains `int main` it will be interpreted \
+/// as a complete program, otherwise the code will be evaluated as an \
 /// expression.
-async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+///
+/// Example: `!xb ceval std::string("Hello, ") + "world!"`
+pub async fn ceval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
     eval(
         ctx,
-        msg,
-        args,
+        &code,
         "int main",
         |rest| {
             let contains_return = rest.contains("return");
@@ -161,17 +157,18 @@ async fn ceval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     .await
 }
 
-#[command]
-#[example = r#"format!("Hello, {}!", "world")"#]
-#[bucket = "eval"]
-/// Evaluate Rust code. If code contains `fn main` it will be \$
-/// interpreted as a complete program, otherwise the code will \$
+#[command(prefix_command, track_edits)]
+/// Evaluate Rust code.
+///
+/// Evaluate Rust code. If code contains `fn main` it will be \
+/// interpreted as a complete program, otherwise the code will \
 /// be evaluated as an expression.
-async fn rusteval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+///
+/// Example: `!xb rusteval format!("Hello, {}!", "world")`
+pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
     eval(
         ctx,
-        msg,
-        args,
+        &code,
         "fn main",
         |rest| {
             format!("fn expr() -> impl std::fmt::Debug {{\n{}\n}} fn main() {{ println!(\"{{:#?}}\", expr()); }}", rest)
@@ -179,10 +176,6 @@ async fn rusteval(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         "mv code{,.rs}; $RUST_NIGHTLY/bin/rustc --edition 2021 code.rs && ./code",
     ).await
 }
-
-#[group("Code evaluation commands")]
-#[commands(ceval, rusteval)]
-struct Eval;
 
 #[cfg(test)]
 mod test {
