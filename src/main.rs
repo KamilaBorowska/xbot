@@ -2,7 +2,8 @@ mod eval;
 mod help;
 mod register;
 
-use poise::{EditTracker, Framework, FrameworkOptions, PrefixFrameworkOptions};
+use log::error;
+use poise::{EditTracker, Framework, FrameworkError, FrameworkOptions, PrefixFrameworkOptions};
 use reqwest::Client;
 use serenity::model::gateway::GatewayIntents;
 use std::env;
@@ -14,6 +15,20 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 pub struct Data {
     sandbox_url: String,
     client: Client,
+}
+
+async fn on_error(error: FrameworkError<'_, Data, Error>) {
+    let result = match error {
+        FrameworkError::UnknownCommand { ctx, msg, .. } => msg
+            .channel_id
+            .say(ctx, "Unknown command.")
+            .await
+            .map(|_| ()),
+        _ => poise::builtins::on_error(error).await,
+    };
+    if let Err(e) = result {
+        error!("Error while handling error {e}");
+    }
 }
 
 #[tokio::main]
@@ -34,6 +49,7 @@ async fn main() {
                 edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(300))),
                 ..Default::default()
             },
+            on_error: |e| Box::pin(on_error(e)),
             ..Default::default()
         })
         .token(token)
