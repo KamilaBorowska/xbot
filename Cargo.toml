@@ -13,6 +13,6 @@ once_cell = "1.16.0"
 poise = { version = "0.5.0", default-features = false }
 regex = { version = "1.7.0", features = ["perf", "std"], default-features = false }
 reqwest = { version = "0.11.13", features = ["json", "native-tls"], default-features = false }
-serde = { version = "1.0.147", features = ["derive"] }
+serde = { version = "1.0.148", features = ["derive"] }
 serenity = { version = "0.11.5", features = ["native_tls_backend"], default-features = false }
 tokio = { version = "1.22.0", features = ["macros", "rt-multi-thread"] }
