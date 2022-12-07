@@ -58,7 +58,7 @@ async fn main() {
                 | GatewayIntents::DIRECT_MESSAGES
                 | GatewayIntents::MESSAGE_CONTENT,
         )
-        .user_data_setup(|_ctx, _ready, _framework| {
+        .setup(|_ctx, _ready, _framework| {
             Box::pin(async {
                 Ok(Data {
                     sandbox_url: env::var("SANDBOX_URL")?,
