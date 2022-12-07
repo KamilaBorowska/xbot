@@ -1,6 +1,7 @@
 mod eval;
 mod help;
 mod register;
+mod trans;
 
 use log::error;
 use poise::{EditTracker, Framework, FrameworkError, FrameworkOptions, PrefixFrameworkOptions};
@@ -14,6 +15,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 
 pub struct Data {
     sandbox_url: String,
+    deepl_auth_key: String,
     client: Client,
 }
 
@@ -43,6 +45,7 @@ async fn main() {
                 register::register(),
                 eval::ceval(),
                 eval::rusteval(),
+                trans::trans_merged(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!xb ".into()),
@@ -62,6 +65,7 @@ async fn main() {
             Box::pin(async {
                 Ok(Data {
                     sandbox_url: env::var("SANDBOX_URL")?,
+                    deepl_auth_key: env::var("DEEPL_AUTH_KEY")?,
                     client: Client::new(),
                 })
             })
