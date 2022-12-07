@@ -15,4 +15,4 @@ regex = { version = "1.7.0", features = ["perf", "std"], default-features = fals
 reqwest = { version = "0.11.13", features = ["json", "native-tls"], default-features = false }
 serde = { version = "1.0.148", features = ["derive"] }
 serenity = { version = "0.11.5", features = ["native_tls_backend"], default-features = false }
-tokio = { version = "1.22.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.23.0", features = ["macros", "rt-multi-thread"] }
