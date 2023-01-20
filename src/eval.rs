@@ -85,6 +85,11 @@ async fn eval(
             .json()
             .await?
     };
+    let output = FILTER.replace_all(&output, "").replace("\x7F\x7F", "\x7F");
+    post_output(ctx, &output, status).await
+}
+
+async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Result<(), Error> {
     let formatted;
     let status_message = match status {
         Some(0) => "",
@@ -94,7 +99,6 @@ async fn eval(
         }
         None => "Killed the process due to timeout\n",
     };
-    let output = FILTER.replace_all(&output, "").replace("\x7F\x7F", "\x7F");
     if output.len() > 800 || more_than_15_newlines(&output) {
         ctx.send(|m| {
             m.attachment(AttachmentType::Bytes {
@@ -175,6 +179,58 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
         },
         "mv code{,.rs}; $RUST_NIGHTLY/bin/rustc --edition 2021 code.rs && ./code",
     ).await
+}
+
+#[command(prefix_command, track_edits)]
+/// Compiles C code and outputs 6502 assembly.
+///
+/// Uses Godbolt Compiler Explorer and llvm-mos internally (https://godbolt.org/).
+///
+/// Example: `!xb casm unsigned char add1(unsigned char v) { return v + 1; }`
+pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
+    #[derive(Serialize)]
+    struct Compile<'a> {
+        source: &'a str,
+        options: Options,
+    }
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Options {
+        user_arguments: &'static str,
+    }
+    #[derive(Deserialize)]
+    struct Response {
+        code: Option<i32>,
+        stdout: Vec<Line>,
+        stderr: Vec<Line>,
+        asm: Vec<Line>,
+    }
+    #[derive(Deserialize)]
+    struct Line {
+        text: String,
+    }
+    let code = strip_code(&code);
+    let response: Response = ctx
+        .data()
+        .client
+        .post("https://godbolt.org/api/compiler/cmos-nes-nrom-trunk/compile")
+        .header("Accept", "application/json")
+        .json(&Compile {
+            source: code,
+            options: Options {
+                user_arguments: "-Os -fno-color-diagnostics -g0",
+            },
+        })
+        .send()
+        .await?
+        .json()
+        .await?;
+    let output: String = [&response.stdout, &response.stderr, &response.asm]
+        .into_iter()
+        .flatten()
+        .flat_map(|Line { text }| [text, "\n"])
+        .collect();
+    post_output(ctx, &output, response.code).await
 }
 
 #[cfg(test)]
