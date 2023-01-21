@@ -218,7 +218,7 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
         .json(&Compile {
             source: code,
             options: Options {
-                user_arguments: "-Os -fno-color-diagnostics -g0",
+                user_arguments: "-Os -fno-color-diagnostics -g0 -mcpu=mosw65816",
             },
         })
         .send()
