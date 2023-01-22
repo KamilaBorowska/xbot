@@ -209,14 +209,14 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
     struct Line {
         text: String,
     }
-    let code = strip_code(&code);
+    let code = format!("#include <cstdint>\n{}", strip_code(&code));
     let response: Response = ctx
         .data()
         .client
         .post("https://godbolt.org/api/compiler/mos-nes-nrom-trunk/compile")
         .header("Accept", "application/json")
         .json(&Compile {
-            source: code,
+            source: &code,
             options: Options {
                 user_arguments: "-Os -fno-color-diagnostics -g0 -mcpu=mosw65816 --std=c++20",
             },
