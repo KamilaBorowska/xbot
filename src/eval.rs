@@ -29,23 +29,45 @@ struct Response {
     status: Option<i32>,
 }
 
-fn strip_code(mut s: &str) -> &str {
-    if let Some((first_line, rest)) = s.split_once('\n') {
-        if let Some(without_prefix) = first_line.strip_prefix("```") {
-            if without_prefix
+#[derive(Debug, PartialEq, Eq)]
+struct Parsed<'a> {
+    options: &'a str,
+    code: &'a str,
+}
+
+impl<'a> Parsed<'a> {
+    fn new(options: &'a str, code: &'a str) -> Parsed<'a> {
+        Self {
+            options: options.trim(),
+            code,
+        }
+    }
+}
+
+fn parse_code(mut s: &str) -> Parsed<'_> {
+    if let Some((options, without_prefix)) = s.split_once("```") {
+        if let Some((first_line, rest)) = without_prefix.split_once('\n') {
+            if first_line
                 .bytes()
                 .all(|c| c.is_ascii_alphanumeric() || c == b'+')
             {
-                if let Some(rest) = rest.strip_suffix("```") {
-                    return rest;
+                if let Some(code) = rest.strip_suffix("```") {
+                    return Parsed::new(options, code);
                 }
             }
         }
     }
-    while let Some(code) = s.strip_prefix('`').and_then(|s| s.strip_suffix('`')) {
-        s = code;
+    let mut options = "";
+    if let Some((o, rest)) = s.split_once('`') {
+        options = o;
+        if let Some(code) = rest.strip_suffix('`') {
+            s = code;
+            while let Some(code) = s.strip_prefix('`').and_then(|s| s.strip_suffix('`')) {
+                s = code;
+            }
+        }
     }
-    s
+    Parsed::new(options, s)
 }
 
 static FILTER: Lazy<Regex> = Lazy::new(|| {
@@ -61,13 +83,13 @@ async fn eval(
     code: &str,
     int_main: &str,
     int_main_wrapper: impl FnOnce(&str) -> String,
-    runner: &str,
+    runner: impl FnOnce(&str) -> String,
 ) -> Result<(), Error> {
-    let contents = strip_code(code);
-    let contents = if contents.contains(int_main) {
-        contents.to_string()
+    let Parsed { options, code } = parse_code(code);
+    let code = if code.contains(int_main) {
+        code.to_string()
     } else {
-        int_main_wrapper(contents.trim())
+        int_main_wrapper(code.trim())
     };
     let Response { output, status } = {
         ctx.data()
@@ -75,9 +97,9 @@ async fn eval(
             .post(&ctx.data().sandbox_url)
             .json(&Command {
                 stdin: "",
-                code: runner,
+                code: &runner(options),
                 files: Files {
-                    code: File { contents },
+                    code: File { contents: code },
                 },
             })
             .send()
@@ -156,7 +178,9 @@ pub async fn ceval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> 
                 if contains_return { "" } else { "});" },
             )
         },
-        "mv code{,.cpp}; clang++ -std=c++17 -Wall -Wextra code.cpp && ./a.out",
+        |opt| {
+            format!("mv code{{,.cpp}}; clang++ -std=c++17 -Wall -Wextra {opt} code.cpp && ./a.out")
+        },
     )
     .await
 }
@@ -177,7 +201,7 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
         |rest| {
             format!("fn expr() -> impl std::fmt::Debug {{\n{}\n}} fn main() {{ println!(\"{{:#?}}\", expr()); }}", rest)
         },
-        "mv code{,.rs}; $RUST_NIGHTLY/bin/rustc --edition 2021 code.rs && ./code",
+        |opt| format!("mv code{{,.rs}}; $RUST_NIGHTLY/bin/rustc --edition 2021 {opt} code.rs && ./code"),
     ).await
 }
 
@@ -196,7 +220,7 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct Options {
-        user_arguments: &'static str,
+        user_arguments: String,
     }
     #[derive(Deserialize)]
     struct Response {
@@ -209,7 +233,10 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
     struct Line {
         text: String,
     }
-    let code = format!("#include <cstdint>\n{}", strip_code(&code));
+    let Parsed { options, code } = parse_code(&code);
+    let code = format!("#include <cstdint>\n{}", code);
+    let user_arguments =
+        format!("-Os -fno-color-diagnostics -g0 -mcpu=mosw65816 --std=c++20 {options}");
     let response: Response = ctx
         .data()
         .client
@@ -217,9 +244,7 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
         .header("Accept", "application/json")
         .json(&Compile {
             source: &code,
-            options: Options {
-                user_arguments: "-Os -fno-color-diagnostics -g0 -mcpu=mosw65816 --std=c++20",
-            },
+            options: Options { user_arguments },
         })
         .send()
         .await?
@@ -235,17 +260,72 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
 
 #[cfg(test)]
 mod test {
+    use super::{parse_code, Parsed};
+
     #[test]
     fn strip_code() {
-        use super::strip_code;
-        assert_eq!(strip_code("test"), "test");
-        assert_eq!(strip_code("`code`"), "code");
-        assert_eq!(strip_code("``foo``"), "foo");
-        assert_eq!(strip_code("```\nbar\n```"), "bar\n");
         assert_eq!(
-            strip_code("```example code here\n```"),
-            "example code here\n"
+            parse_code("test"),
+            Parsed {
+                options: "",
+                code: "test",
+            },
         );
-        assert_eq!(strip_code("```c++\nexample\n```"), "example\n");
+        assert_eq!(
+            parse_code("`code`"),
+            Parsed {
+                options: "",
+                code: "code",
+            },
+        );
+        assert_eq!(
+            parse_code("``foo``"),
+            Parsed {
+                options: "",
+                code: "foo",
+            },
+        );
+        assert_eq!(
+            parse_code("```\nbar\n```"),
+            Parsed {
+                options: "",
+                code: "bar\n",
+            },
+        );
+        assert_eq!(
+            parse_code("```example code here\n```"),
+            Parsed {
+                options: "",
+                code: "example code here\n",
+            },
+        );
+        assert_eq!(
+            parse_code("```c++\nexample\n```"),
+            Parsed {
+                options: "",
+                code: "example\n",
+            },
+        );
+        assert_eq!(
+            parse_code("-Wall ```c++\nhi\n```"),
+            Parsed {
+                options: "-Wall",
+                code: "hi\n",
+            },
+        );
+        assert_eq!(
+            parse_code("-Wall `hi`"),
+            Parsed {
+                options: "-Wall",
+                code: "hi",
+            },
+        );
+        assert_eq!(
+            parse_code("-Wall\n```c++\nhi\n```"),
+            Parsed {
+                options: "-Wall",
+                code: "hi\n",
+            },
+        );
     }
 }
