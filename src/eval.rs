@@ -81,6 +81,21 @@ fn more_than_15_newlines(s: &str) -> bool {
     s.bytes().filter(|&c| c == b'\n').nth(15 - 1).is_some()
 }
 
+async fn sandbox_request<F>(ctx: Context<'_>, command: &Command<'_, F>) -> Result<Response, Error>
+where
+    F: Serialize,
+{
+    Ok(ctx
+        .data()
+        .client
+        .post(&ctx.data().sandbox_url)
+        .json(command)
+        .send()
+        .await?
+        .json()
+        .await?)
+}
+
 async fn eval(
     ctx: Context<'_>,
     code: &str,
@@ -94,22 +109,17 @@ async fn eval(
     } else {
         int_main_wrapper(code.trim())
     };
-    let Response { output, status } = {
-        ctx.data()
-            .client
-            .post(&ctx.data().sandbox_url)
-            .json(&Command {
-                stdin: "",
-                code: &runner(options),
-                files: Files {
-                    code: File { contents: code },
-                },
-            })
-            .send()
-            .await?
-            .json()
-            .await?
-    };
+    let Response { output, status } = sandbox_request(
+        ctx,
+        &Command {
+            stdin: "",
+            code: &runner(options),
+            files: Files {
+                code: File { contents: code },
+            },
+        },
+    )
+    .await?;
     let output = FILTER.replace_all(&output, "").replace("\x7F\x7F", "\x7F");
     post_output(ctx, &output, status).await
 }
@@ -213,19 +223,15 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
 ///
 /// Example: `!xb ftfy âœ”`
 pub async fn ftfy(ctx: Context<'_>, #[rest] text: String) -> Result<(), Error> {
-    let Response { output, .. } = ctx
-        .data()
-        .client
-        .post(&ctx.data().sandbox_url)
-        .json(&Command {
+    let Response { output, .. } = sandbox_request(
+        ctx,
+        &Command {
             stdin: &text,
             code: "ftfy",
             files: NoFiles {},
-        })
-        .send()
-        .await?
-        .json()
-        .await?;
+        },
+    )
+    .await?;
     ctx.say(output).await?;
     Ok(())
 }
