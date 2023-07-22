@@ -134,7 +134,7 @@ async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Res
         }
         None => "Killed the process due to timeout\n",
     };
-    if output.len() > 800 || more_than_15_newlines(&output) {
+    if output.len() > 800 || more_than_15_newlines(output) {
         ctx.send(|m| {
             m.attachment(AttachmentType::Bytes {
                 data: output.as_bytes().into(),
@@ -149,7 +149,7 @@ async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Res
         if output.is_empty() {
             message.push_italic("(no output)");
         } else {
-            message.push_codeblock_safe(&output, None);
+            message.push_codeblock_safe(output, None);
         }
         ctx.say(message.0).await?;
     }
