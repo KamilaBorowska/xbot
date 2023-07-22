@@ -7,16 +7,19 @@ use serenity::model::channel::AttachmentType;
 use serenity::utils::MessageBuilder;
 
 #[derive(Serialize)]
-struct Command<'a> {
-    stdin: &'static str,
+struct Command<'a, F> {
+    stdin: &'a str,
     code: &'a str,
-    files: Files,
+    files: F,
 }
 
 #[derive(Serialize)]
 struct Files {
     code: File,
 }
+
+#[derive(Serialize)]
+struct NoFiles {}
 
 #[derive(Serialize)]
 struct File {
@@ -203,6 +206,28 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
         },
         |opt| format!("mv code{{,.rs}}; $RUST_NIGHTLY/bin/rustc --edition 2021 {opt} code.rs && ./code"),
     ).await
+}
+
+#[command(prefix_command, slash_command, track_edits)]
+/// Fix mojibake.
+///
+/// Example: `!xb ftfy âœ”`
+pub async fn ftfy(ctx: Context<'_>, #[rest] text: String) -> Result<(), Error> {
+    let Response { output, .. } = ctx
+        .data()
+        .client
+        .post(&ctx.data().sandbox_url)
+        .json(&Command {
+            stdin: &text,
+            code: "ftfy",
+            files: NoFiles {},
+        })
+        .send()
+        .await?
+        .json()
+        .await?;
+    ctx.say(output).await?;
+    Ok(())
 }
 
 #[command(prefix_command, track_edits)]
