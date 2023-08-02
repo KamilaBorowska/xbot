@@ -221,17 +221,15 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
 const PYTHON_EVALUATOR: &str = r#"
 import ast
 code = open("code").read()
-a = ast.parse(code)
+a = ast.parse(code, "code")
 last_expression = None
 if a.body and isinstance(a.body[-1], ast.Expr):
-    last_expression = ast.unparse(a.body.pop())
+    last_expression = a.body.pop()
 g = {}
 l = {}
-exec(ast.unparse(a), g, l)
+exec(compile(code, "code", "exec"), g, l)
 if last_expression:
-    v = eval(last_expression, g, l)
-    if v is not None:
-        print(repr(v))
+    eval(compile(ast.Interactive([last_expression]), "code", "single"), g, l)
 "#;
 
 #[command(prefix_command, track_edits)]
