@@ -45,6 +45,7 @@ async fn main() {
                 register::register(),
                 eval::ceval(),
                 eval::rusteval(),
+                eval::pyeval(),
                 eval::ftfy(),
                 eval::casm(),
                 trans::trans_merged(),

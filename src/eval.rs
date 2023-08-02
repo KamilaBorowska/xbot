@@ -218,6 +218,21 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
     ).await
 }
 
+#[command(prefix_command, track_edits)]
+/// Evaluate Python code.
+///
+/// Example: `!xb pyeval print(2 + 2)`
+pub async fn pyeval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
+    eval(
+        ctx,
+        &code,
+        "",
+        |_| unreachable!(),
+        |opt| format!("python3 {opt} code"),
+    )
+    .await
+}
+
 #[command(prefix_command, slash_command, track_edits)]
 /// Fix mojibake.
 ///
