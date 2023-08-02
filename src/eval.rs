@@ -227,7 +227,7 @@ if a.body and isinstance(a.body[-1], ast.Expr):
     last_expression = a.body.pop()
 g = {}
 l = {}
-exec(compile(code, "code", "exec"), g, l)
+exec(compile(a, "code", "exec"), g, l)
 if last_expression:
     eval(compile(ast.Interactive([last_expression]), "code", "single"), g, l)
 "#;
