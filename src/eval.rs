@@ -218,6 +218,22 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Erro
     ).await
 }
 
+const PYTHON_EVALUATOR: &str = r#"
+import ast
+code = open("code").read()
+a = ast.parse(code)
+last_expression = None
+if a.body and isinstance(a_last := a.body[-1], ast.Expr):
+    last_expression = ast.unparse(a.body.pop())
+g = {}
+l = {}
+exec(ast.unparse(a), g, l)
+if last_expression:
+    v = eval(last_expression, g, l)
+    if v is not None:
+        print(repr(v))
+"#;
+
 #[command(prefix_command, track_edits)]
 /// Evaluate Python code.
 ///
@@ -228,7 +244,7 @@ pub async fn pyeval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error>
         &code,
         "",
         |_| unreachable!(),
-        |opt| format!("python3 {opt} code"),
+        |opt| format!("python3 {opt} -c '{PYTHON_EVALUATOR}'"),
     )
     .await
 }
