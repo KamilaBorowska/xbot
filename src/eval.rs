@@ -223,7 +223,7 @@ import ast
 code = open("code").read()
 a = ast.parse(code)
 last_expression = None
-if a.body and isinstance(a_last := a.body[-1], ast.Expr):
+if a.body and isinstance(a.body[-1], ast.Expr):
     last_expression = ast.unparse(a.body.pop())
 g = {}
 l = {}
