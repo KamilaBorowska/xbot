@@ -3,6 +3,7 @@ mod help;
 mod register;
 mod trans;
 
+use anyhow::Error;
 use log::error;
 use poise::{EditTracker, Framework, FrameworkError, FrameworkOptions, PrefixFrameworkOptions};
 use reqwest::Client;
@@ -10,7 +11,6 @@ use serenity::model::gateway::GatewayIntents;
 use std::env;
 use std::time::Duration;
 
-type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 pub struct Data {
@@ -19,7 +19,7 @@ pub struct Data {
     client: Client,
 }
 
-async fn on_error(error: FrameworkError<'_, Data, Error>) {
+async fn on_error(error: FrameworkError<'_, Data, anyhow::Error>) {
     let result = match error {
         FrameworkError::UnknownCommand { ctx, msg, .. } => msg
             .channel_id
