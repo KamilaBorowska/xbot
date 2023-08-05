@@ -1,4 +1,5 @@
-use crate::{Context, Error};
+use crate::Context;
+use anyhow::Result;
 use poise::command;
 
 /// Shows this menu.
@@ -8,7 +9,7 @@ pub async fn help(
     #[description = "Specific command to show help about"]
     #[autocomplete = "autocomplete_command"]
     command: Option<String>,
-) -> Result<(), Error> {
+) -> Result<()> {
     poise::builtins::help(ctx, command.as_deref(), Default::default()).await?;
     Ok(())
 }

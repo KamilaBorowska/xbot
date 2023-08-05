@@ -1,4 +1,5 @@
-use crate::{Context, Error};
+use crate::Context;
+use anyhow::Result;
 use once_cell::sync::Lazy;
 use poise::command;
 use regex::Regex;
@@ -81,7 +82,7 @@ fn more_than_15_newlines(s: &str) -> bool {
     s.bytes().filter(|&c| c == b'\n').nth(15 - 1).is_some()
 }
 
-async fn sandbox_request<F>(ctx: Context<'_>, command: &Command<'_, F>) -> Result<Response, Error>
+async fn sandbox_request<F>(ctx: Context<'_>, command: &Command<'_, F>) -> Result<Response>
 where
     F: Serialize,
 {
@@ -102,7 +103,7 @@ async fn eval(
     int_main: &str,
     int_main_wrapper: impl FnOnce(&str) -> String,
     runner: impl FnOnce(&str) -> String,
-) -> Result<(), Error> {
+) -> Result<()> {
     let Parsed { options, code } = parse_code(code);
     let code = if code.contains(int_main) {
         code.to_string()
@@ -124,7 +125,7 @@ async fn eval(
     post_output(ctx, &output, status).await
 }
 
-async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Result<(), Error> {
+async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Result<()> {
     let formatted;
     let status_message = match status {
         Some(0) => "",
@@ -164,7 +165,7 @@ async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Res
 /// expression.
 ///
 /// Example: `!xb ceval std::string("Hello, ") + "world!"`
-pub async fn ceval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
+pub async fn ceval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
     eval(
         ctx,
         &code,
@@ -206,7 +207,7 @@ pub async fn ceval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> 
 /// be evaluated as an expression.
 ///
 /// Example: `!xb rusteval format!("Hello, {}!", "world")`
-pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
+pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
     eval(
         ctx,
         &code,
@@ -236,7 +237,7 @@ if last_expression:
 /// Evaluate Python code.
 ///
 /// Example: `!xb pyeval print(2 + 2)`
-pub async fn pyeval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
+pub async fn pyeval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
     eval(
         ctx,
         &code,
@@ -251,7 +252,7 @@ pub async fn pyeval(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error>
 /// Fix mojibake.
 ///
 /// Example: `!xb ftfy âœ”`
-pub async fn ftfy(ctx: Context<'_>, #[rest] text: String) -> Result<(), Error> {
+pub async fn ftfy(ctx: Context<'_>, #[rest] text: String) -> Result<()> {
     let Response { output, .. } = sandbox_request(
         ctx,
         &Command {
@@ -271,7 +272,7 @@ pub async fn ftfy(ctx: Context<'_>, #[rest] text: String) -> Result<(), Error> {
 /// Uses Godbolt Compiler Explorer and llvm-mos internally (https://godbolt.org/).
 ///
 /// Example: `!xb casm unsigned char add1(unsigned char v) { return v + 1; }`
-pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<(), Error> {
+pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
     #[derive(Serialize)]
     struct Compile<'a> {
         source: &'a str,

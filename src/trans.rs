@@ -1,4 +1,5 @@
-use crate::{Context, Data, Error};
+use crate::{Context, Data};
+use anyhow::{Error, Result};
 use poise::{command, Command};
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +21,7 @@ const TARGET_LANGUAGES: &[&str] = &[
 ];
 
 #[command(prefix_command)]
-async fn trans_prefix(ctx: Context<'_>, #[rest] text: Option<String>) -> Result<(), Error> {
+async fn trans_prefix(ctx: Context<'_>, #[rest] text: Option<String>) -> Result<()> {
     let Some(text) = text else {
         // Trans flag
         ctx.say("\u{1F3F3}\u{FE0F}\u{200D}\u{26A7}\u{FE0F}").await?;
@@ -63,7 +64,7 @@ async fn trans(
     #[description = "Text to translate"]
     #[rest]
     text: String,
-) -> Result<(), Error> {
+) -> Result<()> {
     run_translation(ctx, from.as_deref(), to.as_deref(), &text).await
 }
 
@@ -116,7 +117,7 @@ async fn run_translation(
     from: Option<&str>,
     to: Option<&str>,
     text: &str,
-) -> Result<(), Error> {
+) -> Result<()> {
     let api_key = &ctx.data().deepl_auth_key;
     let source_lang = match from {
         Some(lang) => {
