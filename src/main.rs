@@ -1,5 +1,6 @@
 mod eval;
 mod help;
+mod png;
 mod register;
 mod trans;
 
@@ -49,6 +50,7 @@ async fn main() {
                 eval::ftfy(),
                 eval::casm(),
                 trans::trans_merged(),
+                png::png(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!xb ".into()),
