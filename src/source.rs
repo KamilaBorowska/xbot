@@ -18,8 +18,9 @@ use crate::Context;
 use anyhow::Result;
 use poise::command;
 
-#[command(prefix_command, hide_in_help, owners_only)]
-pub async fn register(ctx: Context<'_>) -> Result<()> {
-    poise::builtins::register_application_commands_buttons(ctx).await?;
+/// Get the link to the source code for this bot.
+#[command(prefix_command, slash_command, owners_only)]
+pub async fn source(ctx: Context<'_>) -> Result<()> {
+    ctx.say("<https://github.com/xfix/xbot>").await?;
     Ok(())
 }
