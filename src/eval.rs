@@ -146,7 +146,7 @@ async fn post_output(ctx: Context<'_>, output: &str, status: Option<i32>) -> Res
     let status_message = match status {
         Some(0) => "",
         Some(status) => {
-            formatted = format!("Exited with status code {}\n", status);
+            formatted = format!("Exited with status code {status}\n");
             &formatted
         }
         None => "Killed the process due to timeout\n",
@@ -229,7 +229,7 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
         &code,
         "fn main",
         |rest| {
-            format!("fn expr() -> impl std::fmt::Debug {{\n{}\n}} fn main() {{ println!(\"{{:#?}}\", expr()); }}", rest)
+            format!("fn expr() -> impl std::fmt::Debug {{\n{rest}\n}} fn main() {{ println!(\"{{:#?}}\", expr()); }}")
         },
         |opt| format!("mv code{{,.rs}}; $RUST_NIGHTLY/bin/rustc --edition 2021 {opt} code.rs && ./code"),
     ).await
@@ -311,7 +311,7 @@ pub async fn casm(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
         text: String,
     }
     let Parsed { options, code } = parse_code(&code);
-    let code = format!("#include <cstdint>\n{}", code);
+    let code = format!("#include <cstdint>\n{code}");
     let user_arguments =
         format!("-Os -fno-color-diagnostics -g0 -mcpu=mosw65816 --std=c++20 {options}");
     let response: Response = ctx
