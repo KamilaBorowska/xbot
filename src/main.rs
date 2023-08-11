@@ -16,6 +16,7 @@
 
 mod eval;
 mod help;
+mod ping;
 mod png;
 mod register;
 mod source;
@@ -60,15 +61,17 @@ async fn main() {
         .options(FrameworkOptions {
             commands: vec![
                 help::help(),
-                register::register(),
                 eval::ceval(),
                 eval::rusteval(),
                 eval::pyeval(),
                 eval::ftfy(),
                 eval::casm(),
                 trans::trans_merged(),
-                png::png(),
                 source::source(),
+                // Hidden commands
+                register::register(),
+                png::png(),
+                ping::ping(),
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!xb ".into()),
