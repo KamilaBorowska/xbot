@@ -108,7 +108,7 @@ fn autocomplete_case_insensitive<'a>(
                 trimmed_elem.eq_ignore_ascii_case(partial)
             })
         })
-        .map(|elem| elem.to_string())
+        .map(|elem| String::from(*elem))
 }
 
 #[derive(Serialize)]

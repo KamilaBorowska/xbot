@@ -16,7 +16,7 @@
 
 use crate::Context;
 use anyhow::Result;
-use poise::command;
+use poise::{builtins::HelpConfiguration, command};
 
 /// Shows this menu.
 #[command(prefix_command, slash_command, track_edits)]
@@ -26,7 +26,7 @@ pub async fn help(
     #[autocomplete = "autocomplete_command"]
     command: Option<String>,
 ) -> Result<()> {
-    poise::builtins::help(ctx, command.as_deref(), Default::default()).await?;
+    poise::builtins::help(ctx, command.as_deref(), HelpConfiguration::default()).await?;
     Ok(())
 }
 
