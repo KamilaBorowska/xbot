@@ -24,7 +24,9 @@ mod trans;
 
 use anyhow::Error;
 use log::error;
-use poise::{EditTracker, Framework, FrameworkError, FrameworkOptions, PrefixFrameworkOptions};
+use poise::{
+    EditTracker, Framework, FrameworkError, FrameworkOptions, Prefix, PrefixFrameworkOptions,
+};
 use reqwest::Client;
 use serenity::model::gateway::GatewayIntents;
 use std::env;
@@ -75,6 +77,7 @@ async fn main() {
             ],
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some("!xb ".into()),
+                additional_prefixes: vec![Prefix::Literal(".xb ")],
                 edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(300))),
                 ..Default::default()
             },
