@@ -215,6 +215,9 @@ pub async fn ceval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
     .await
 }
 
+static FEATURES: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(?:\s*#\s*!\s*\[\s*feature\s*\([^)]+\)\s*\])*").unwrap());
+
 #[command(prefix_command, track_edits)]
 /// Evaluate Rust code.
 ///
@@ -229,10 +232,36 @@ pub async fn rusteval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
         &code,
         "fn main",
         |rest| {
-            format!("fn expr() -> impl std::fmt::Debug {{\n{rest}\n}} fn main() {{ println!(\"{{:#?}}\", expr()); }}")
+            let regex_match = FEATURES.find(rest).unwrap();
+            let features = regex_match.as_str();
+            let inner = &rest[regex_match.end()..];
+            format!(
+                concat!(
+                    "{features}\n",
+                    "fn expr() -> impl std::fmt::Debug + 'static {{\n",
+                    "{inner}\n",
+                    "}}\n",
+                    "fn main() {{\n",
+                    "    fn is_unit<T: 'static>(_: &T) -> bool {{\n",
+                    "        std::any::TypeId::of::<()>() == std::any::TypeId::of::<T>()\n",
+                    "    }}\n",
+                    "    let v = expr();\n",
+                    "    if !is_unit(&v) {{\n",
+                    "        println!(\"{{v:#?}}\");\n",
+                    "    }}\n",
+                    "}}\n",
+                ),
+                features = features,
+                inner = inner,
+            )
         },
-        |opt| format!("mv code{{,.rs}}; $RUST_NIGHTLY/bin/rustc --edition 2021 {opt} code.rs && ./code"),
-    ).await
+        |opt| {
+            format!(
+                "mv code{{,.rs}}; $RUST_NIGHTLY/bin/rustc --edition 2021 {opt} code.rs && ./code"
+            )
+        },
+    )
+    .await
 }
 
 const PYTHON_EVALUATOR: &str = r#"
