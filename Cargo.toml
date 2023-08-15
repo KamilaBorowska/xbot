@@ -20,7 +20,7 @@ regex = { version = "1.9.3", features = ["perf", "std", "unicode-perl"], default
 reqwest = { version = "0.11.18", features = ["json", "native-tls"], default-features = false }
 serde = { version = "1.0.183", features = ["derive"] }
 serenity = { version = "0.11.6", features = ["native_tls_backend"], default-features = false }
-tokio = { version = "1.30.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.31.0", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 png = "0.17.9"
