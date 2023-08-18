@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.75"
-cairo-rs = { version = "0.17.10", features = ["png"] }
+cairo-rs = { version = "0.18.0", features = ["png"] }
 dotenv = "0.15.0"
 env_logger = "0.10.0"
 log = "0.4.20"
