@@ -2,19 +2,19 @@
 name = "xbot"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.65"
+rust-version = "1.71"
 license = "AGPL-3.0-or-later"
 publish = false
 
 [dependencies]
 anyhow = "1.0.75"
-cairo-rs = { version = "0.17.10", features = ["png"] }
+cairo-rs = { version = "0.18.0", features = ["png"] }
 dotenv = "0.15.0"
 env_logger = "0.10.0"
 log = "0.4.20"
 once_cell = "1.18.0"
-pango = "0.17.10"
-pangocairo = "0.17.10"
+pango = "0.18.0"
+pangocairo = "0.18.0"
 poise = { version = "0.5.5", default-features = false }
 regex = { version = "1.9.3", features = ["perf", "std", "unicode-perl"], default-features = false }
 reqwest = { version = "0.11.18", features = ["json", "native-tls"], default-features = false }
