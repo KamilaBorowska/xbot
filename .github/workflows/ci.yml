@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: sudo apt-get update && sudo apt-get install -y libcairo2-dev libpango1.0-dev
-      - uses: cachix/install-nix-action@v22
+      - uses: cachix/install-nix-action@v23
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - run: nix-env -iA cargo-msrv -f '<nixpkgs>'
