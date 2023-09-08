@@ -41,7 +41,7 @@ async fn trans_prefix(ctx: Context<'_>, #[rest] text: Option<String>) -> Result<
     let Some(text) = text else {
         // Trans flag
         ctx.say("\u{1F3F3}\u{FE0F}\u{200D}\u{26A7}\u{FE0F}").await?;
-        return Ok(())
+        return Ok(());
     };
     let mut text: &str = &text;
     let mut from = None;
