@@ -288,7 +288,7 @@ pub async fn pyeval(ctx: Context<'_>, #[rest] code: String) -> Result<()> {
         &code,
         "",
         |_| unreachable!(),
-        |opt| format!("python3 {opt} -c '{PYTHON_EVALUATOR}'"),
+        |opt| format!("python3 {opt} -u -c '{PYTHON_EVALUATOR}'"),
     )
     .await
 }
