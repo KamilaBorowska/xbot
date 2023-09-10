@@ -1,2 +1,6 @@
+# SPDX-FileCopyrightText: 2022 Konrad Borowski <konrad@borowski.pw>
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 /target
 .env
